@@ -16,8 +16,12 @@ class WpMigrationServiceProvider extends ServiceProvider
 
     public function boot(): void
     {
-        if (!$this->app->runningInConsole()) {
-            \Log::info('WpMigrationServiceProvider running 🔥');
+        if ($this->app->runningInConsole()) {
+            $command = $_SERVER['argv'][1] ?? null;
+
+            if ($command === 'wp:migrate') {
+                \Log::info('WpMigrationServiceProvider running 🔥');
+            }
         }
     }
 }
