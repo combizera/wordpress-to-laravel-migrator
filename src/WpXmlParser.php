@@ -72,6 +72,7 @@ class WpXmlParser
 
         $wpData = $item->children($namespaces['wp']);
 
+        // Apenas posts válidos terão categorias
         $categories = $this->parseCategories($item);
         $content = isset($namespaces['content'])
             ? $this->parseContent($item->children($namespaces['content'])->encoded)
@@ -91,6 +92,7 @@ class WpXmlParser
             isset($wpData->post_modified) ? $this->parseDate((string) $wpData->post_modified) : Carbon::now()
         );
     }
+
 
     /**
      * Validates if an XML item is a valid WordPress post
@@ -122,78 +124,6 @@ class WpXmlParser
     }
 
     /**
-     * Cleans and format the XML content.
-     *
-     * @param SimpleXMLElement|null $content
-     * @return string
-     */
-    private function parseContent(?SimpleXMLElement $content): string
-    {
-        if (!$content) {
-            return '';
-        }
-
-        $content = (string) $content;
-
-        $content = preg_replace([
-            '/<!--(.*?)-->/',
-            '/\s*class="wp-[^"]*"/',
-            '/\s+/'
-        ], ['','', ' '], $content);
-
-        return trim(preg_replace("/[\r\n]+/", "\n", $content));
-    }
-
-    /**
-     * Convert date format to Laravel `created_at` format
-     *
-     * @param string $date
-     * @return string
-     */
-    private function parseDate(string $date): string
-    {
-        if (empty($date)) {
-            return Carbon::now()->format('Y-m-d H:i:s');
-        }
-
-        try {
-            if (preg_match('/^\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}$/', $date)) {
-                return Carbon::createFromFormat('Y-m-d H:i:s', $date)->format('Y-m-d H:i:s');
-            }
-
-            return Carbon::createFromFormat(DATE_RSS, $date)->format('Y-m-d H:i:s');
-        } catch (\Exception $e) {
-            return Carbon::now()->format('Y-m-d H:i:s');
-        }
-    }
-
-    /**
-     * Parse categories from the XML file
-     *
-     * @param SimpleXMLElement $item
-     * @return array<int> List of category IDs
-     */
-    private function parseCategories(SimpleXMLElement $item): array
-    {
-        $categories = [];
-
-        foreach ($item->category as $category) {
-            $categoryName = trim((string) $category);
-
-            if (!empty($categoryName)) {
-                $existingCategory = Category::query()->firstOrCreate(
-                    ['name' => $categoryName],
-                    ['slug' => Str::slug($categoryName)]
-                );
-
-                $categories[] = $existingCategory->id;
-            }
-        }
-
-        return $categories;
-    }
-
-    /**
      * Generate a unique slug for the post.
      * If the slug already exists in the same category, append a number (ex: slug-1, slug-2).
      *
@@ -221,6 +151,91 @@ class WpXmlParser
     }
 
     /**
+     * Cleans and format the XML content.
+     *
+     * @param SimpleXMLElement|null $content
+     * @return string
+     */
+    private function parseContent(?SimpleXMLElement $content): string
+    {
+        if (!$content) {
+            return '';
+        }
+
+        $content = (string) $content;
+
+        $content = preg_replace([
+            '/<!--(.*?)-->/',
+            '/\s*class="wp-[^"]*"/',
+            '/\s+/'
+        ], ['','', ' '], $content);
+
+        return trim(preg_replace("/[\r\n]+/", "\n", $content));
+    }
+
+    /**
+     * Parse categories from the XML file
+     *
+     * @param SimpleXMLElement $item
+     * @return array<int> List of category IDs
+     */
+    /**
+     * Parse categories from a valid post item.
+     *
+     * @param SimpleXMLElement $item
+     * @return array<int> List of category IDs
+     */
+    /**
+     * Parse categories from the XML file, ensuring only valid categories are added.
+     *
+     * @param SimpleXMLElement $item
+     * @return array<int> List of valid category IDs
+     */
+    /**
+     * Parse categories from the XML file
+     *
+     * @param SimpleXMLElement $item
+     * @return array<int> List of category IDs
+     */
+    private function parseCategories(SimpleXMLElement $item): array
+    {
+        $categories = [];
+
+        // Garantir que o item seja um post antes de processar
+        $namespaces = $item->getNamespaces(true);
+        if (!isset($namespaces['wp'])) {
+            return [];
+        }
+
+        $wpData = $item->children($namespaces['wp']);
+        if (!isset($wpData->post_type) || (string) $wpData->post_type !== 'post') {
+            return [];
+        }
+
+        foreach ($item->category as $category) {
+            $categoryName = trim((string) $category);
+            $categoryDomain = (string) $category['domain']; // Verificar se é realmente uma categoria
+
+            if (empty($categoryName) || is_numeric($categoryName)) {
+                continue;
+            }
+
+            if ($categoryDomain !== 'category') { // Ignorar tags e outras taxonomias
+                continue;
+            }
+
+            $existingCategory = Category::query()->firstOrCreate(
+                ['slug' => Str::slug($categoryName)],
+                ['name' => $categoryName]
+            );
+
+            $categories[] = $existingCategory->id;
+        }
+
+        return $categories;
+    }
+
+    /**
      * Determine if the post should be published.
      * Returns 1 if the status is "publish", otherwise 0.
      *
@@ -238,5 +253,28 @@ class WpXmlParser
         $wpData = $item->children($namespaces['wp']);
 
         return isset($wpData->status) && (string) $wpData->status === 'publish' ? 1 : 0;
+    }
+
+    /**
+     * Convert date format to Laravel `created_at` format
+     *
+     * @param string $date
+     * @return string
+     */
+    private function parseDate(string $date): string
+    {
+        if (empty($date)) {
+            return Carbon::now()->format('Y-m-d H:i:s');
+        }
+
+        try {
+            if (preg_match('/^\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}$/', $date)) {
+                return Carbon::createFromFormat('Y-m-d H:i:s', $date)->format('Y-m-d H:i:s');
+            }
+
+            return Carbon::createFromFormat(DATE_RSS, $date)->format('Y-m-d H:i:s');
+        } catch (\Exception $e) {
+            return Carbon::now()->format('Y-m-d H:i:s');
+        }
     }
 }
