@@ -179,29 +179,10 @@ class WpXmlParser
      * @param SimpleXMLElement $item
      * @return array<int> List of category IDs
      */
-    /**
-     * Parse categories from a valid post item.
-     *
-     * @param SimpleXMLElement $item
-     * @return array<int> List of category IDs
-     */
-    /**
-     * Parse categories from the XML file, ensuring only valid categories are added.
-     *
-     * @param SimpleXMLElement $item
-     * @return array<int> List of valid category IDs
-     */
-    /**
-     * Parse categories from the XML file
-     *
-     * @param SimpleXMLElement $item
-     * @return array<int> List of category IDs
-     */
     private function parseCategories(SimpleXMLElement $item): array
     {
         $categories = [];
 
-        // Garantir que o item seja um post antes de processar
         $namespaces = $item->getNamespaces(true);
         if (!isset($namespaces['wp'])) {
             return [];
@@ -214,19 +195,23 @@ class WpXmlParser
 
         foreach ($item->category as $category) {
             $categoryName = trim((string) $category);
-            $categoryDomain = (string) $category['domain']; // Verificar se é realmente uma categoria
+            $categoryDomain = (string) $category['domain'];
 
             if (empty($categoryName) || is_numeric($categoryName)) {
                 continue;
             }
 
-            if ($categoryDomain !== 'category') { // Ignorar tags e outras taxonomias
+            if (!preg_match('/^[\p{L}0-9\s\-]+$/u', $categoryName)) {
+                continue;
+            }
+
+            if ($categoryDomain !== 'category') {
                 continue;
             }
 
             $existingCategory = Category::query()->firstOrCreate(
-                ['slug' => Str::slug($categoryName)],
-                ['name' => $categoryName]
+                ['name' => $categoryName],
+                ['slug' => Str::slug($categoryName)]
             );
 
             $categories[] = $existingCategory->id;
