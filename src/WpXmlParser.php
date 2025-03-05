@@ -11,6 +11,9 @@ use Exception;
 class WpXmlParser
 {
     public SimpleXMLElement $xml;
+    public string $postModel;
+    public string $categoryModel;
+    public int $defaultUserId;
 
     /**
      * Load the XML file and initialize the parser
@@ -24,13 +27,17 @@ class WpXmlParser
             throw new Exception("XML File not found.");
         }
 
-        // LIBXML_NOCDATA - Merge CDATA as text nodes
+        $this->postModel = config('wp-migration.post_model', 'App\\Models\\Post');
+        $this->categoryModel = config('wp-migration.category_model', 'App\\Models\\Category');
+        $this->defaultUserId = config('wp-migration.default_user_id', 1);
+
         $this->xml = simplexml_load_file($filePath, "SimpleXMLElement", LIBXML_NOCDATA);
 
         if ($this->xml === false) {
             throw new Exception("Error loading XML file.");
         }
     }
+
 
     /**
      * Extracts and returns an array of posts from the XML file
@@ -82,14 +89,14 @@ class WpXmlParser
         }
 
         return new Post(
-            1,
+            $this->defaultUserId,
             $categories,
             $this->parseTitle($item),
             (string) $item->link,
             $content,
             $this->parsePublish($item),
             isset($item->pubDate) ? $this->parseDate((string) $item->pubDate) : Carbon::now(),
-            isset($wpData->post_modified) ? $this->parseDate((string) $wpData->post_modified) : Carbon::now(),
+            isset($wpData->post_modified) ? $this->parseDate((string) $wpData->post_modified) : Carbon::now()
         );
     }
 
