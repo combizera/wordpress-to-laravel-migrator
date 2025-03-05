@@ -6,6 +6,7 @@ class Post
 {
     public function __construct
     (
+        public int $userId,
         public array $categories,
         public string $title,
         public string $slug,

@@ -69,6 +69,7 @@ class MigrateWpXmlCommand extends Command
                 $slug = $parser->parseSlug($post->title, $categoryId);
 
                 Post::query()->create([
+                    'user_id' => $post->userId,
                     'category_id' => $categoryId,
                     'title' => $post->title,
                     'slug' => $slug,

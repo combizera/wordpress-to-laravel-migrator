@@ -72,7 +72,6 @@ class WpXmlParser
 
         $wpData = $item->children($namespaces['wp']);
 
-        // Apenas posts válidos terão categorias
         $categories = $this->parseCategories($item);
         $content = isset($namespaces['content'])
             ? $this->parseContent($item->children($namespaces['content'])->encoded)
@@ -83,16 +82,16 @@ class WpXmlParser
         }
 
         return new Post(
+            1,
             $categories,
             $this->parseTitle($item),
             (string) $item->link,
             $content,
             $this->parsePublish($item),
             isset($item->pubDate) ? $this->parseDate((string) $item->pubDate) : Carbon::now(),
-            isset($wpData->post_modified) ? $this->parseDate((string) $wpData->post_modified) : Carbon::now()
+            isset($wpData->post_modified) ? $this->parseDate((string) $wpData->post_modified) : Carbon::now(),
         );
     }
-
 
     /**
      * Validates if an XML item is a valid WordPress post
