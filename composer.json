@@ -3,6 +3,7 @@
     "description": "Package for migrating WordPress posts to laravel",
     "type": "library",
     "license": "MIT",
+    "version": "1.0.9",
     "autoload": {
         "psr-4": {
             "Combizera\\WpMigration\\": "src/"
