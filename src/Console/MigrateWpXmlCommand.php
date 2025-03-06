@@ -5,8 +5,6 @@ namespace Combizera\WpMigration\Console;
 use App\Models\Category;
 use Illuminate\Console\Command;
 use Combizera\WpMigration\WpXmlParser;
-use App\Models\Post;
-use Illuminate\Support\Str;
 
 class MigrateWpXmlCommand extends Command
 {
@@ -37,29 +35,7 @@ class MigrateWpXmlCommand extends Command
             $this->info("📢 Published: {$totalPublished} | ⏳ Draft: {$totalUnpublished}");
             $this->info("📂 Loading categories...");
 
-            $existingCategories = Category::query()->pluck('slug')->toArray();
-            $newCategories = [];
-
-            foreach ($posts as $post) {
-                foreach ($post->categories as $category) {
-                    if (!in_array($category, $existingCategories)) {
-                        $newCategories[] = $category;
-                        $existingCategories[] = $category;
-                    }
-                }
-            }
-
-            foreach ($newCategories as $categoryName) {
-                Category::query()->firstOrCreate(
-                    ['slug' => Str::slug($categoryName)],
-                    ['name' => $categoryName]
-                );
-            }
-
-            $totalNewCategories = count($newCategories);
-            $this->info("✅  {$totalNewCategories} new categories created.");
-
-            $this->info("📌 Starting post migration...");
+            $postModel = app(config('wp-migration.post_model'));
 
             $bar = $this->output->createProgressBar($totalPosts);
             $bar->start();
@@ -68,13 +44,13 @@ class MigrateWpXmlCommand extends Command
                 $categoryId = !empty($post->categories) ? $post->categories[0] : $this->getDefaultCategoryId();
                 $slug = $parser->parseSlug($post->title, $categoryId);
 
-                Post::query()->create([
+                $postModel::query()->create([
                     'user_id' => $post->userId,
                     'category_id' => $categoryId,
-                    'title' => $post->title,
-                    'slug' => $slug,
-                    'content' => $post->content,
-                    'is_published' => $post->isPublished,
+                    config('wp-migration.post_columns.title') => $post->title,
+                    config('wp-migration.post_columns.slug') => $slug,
+                    config('wp-migration.post_columns.content') => $post->content,
+                    config('wp-migration.post_columns.is_published') => $post->isPublished,
                     'created_at' => $post->createdAt,
                     'updated_at' => $post->updatedAt,
                 ]);

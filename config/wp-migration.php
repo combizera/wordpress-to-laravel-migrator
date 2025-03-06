@@ -7,21 +7,27 @@ return [
 
     /*
     |--------------------------------------------------------------------------
-    | Post Model
+    | Post Model Configuration
     |--------------------------------------------------------------------------
     |
-    | Define which model should be used for storing posts.
-    | This allows customization in case the user has a different model.
+    | Here you can customize everything related to the Post model, such as
+    | column names for title, slug, content, and is_published.
     |
     */
     'post_model' => Post::class,
+    'post_columns' => [
+        'title' => 'title',
+        'slug' => 'slug',
+        'content' => 'content',
+        'is_published' => 'is_published',
+    ],
 
     /*
     |--------------------------------------------------------------------------
-    | Category Model
+    | Category Model Configuration
     |--------------------------------------------------------------------------
     |
-    | Define which model should be used for storing categories.
+    | Defines which model should be used for storing categories.
     | The default is 'App\Models\Category', but it can be changed if necessary.
     |
     */

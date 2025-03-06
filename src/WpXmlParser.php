@@ -14,6 +14,7 @@ class WpXmlParser
     public string $postModel;
     public string $categoryModel;
     public int $defaultUserId;
+    public array $postColumns;
 
     /**
      * Load the XML file and initialize the parser
@@ -30,6 +31,12 @@ class WpXmlParser
         $this->postModel = config('wp-migration.post_model', 'App\\Models\\Post');
         $this->categoryModel = config('wp-migration.category_model', 'App\\Models\\Category');
         $this->defaultUserId = config('wp-migration.default_user_id', 1);
+        $this->postColumns = config('wp-migration.post_columns', [
+            'title' => 'title',
+            'slug' => 'slug',
+            'content' => 'content',
+            'is_published' => 'is_published',
+        ]);
 
         $this->xml = simplexml_load_file($filePath, "SimpleXMLElement", LIBXML_NOCDATA);
 
@@ -141,16 +148,18 @@ class WpXmlParser
     {
         $baseSlug = Str::slug($title);
 
-        if (!\App\Models\Post::query()->where('slug', $baseSlug)->exists()) {
+        $postModel = app($this->postModel);
+
+        if (!$postModel::query()->where($this->postColumns['slug'], $baseSlug)->exists()) {
             return $baseSlug;
         }
 
         $counter = 1;
-        $newSlug = $baseSlug . '-' . $counter;
+        $newSlug = "{$baseSlug}-{$counter}";
 
-        while (\App\Models\Post::query()->where('slug', $newSlug)->exists()) {
+        while ($postModel::query()->where($this->postColumns['slug'], $newSlug)->exists()) {
             $counter++;
-            $newSlug = $baseSlug . '-' . $counter;
+            $newSlug = "{$baseSlug}-{$counter}";
         }
 
         return $newSlug;
