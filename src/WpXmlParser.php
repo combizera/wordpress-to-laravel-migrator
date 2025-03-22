@@ -4,6 +4,8 @@ namespace Combizera\WpMigration;
 
 use App\Models\Category;
 use Carbon\Carbon;
+use Illuminate\Support\Facades\Http;
+use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
 use SimpleXMLElement;
 use Exception;
@@ -85,7 +87,6 @@ class WpXmlParser
         }
 
         $wpData = $item->children($namespaces['wp']);
-
         $categories = $this->parseCategories($item);
         $content = isset($namespaces['content'])
             ? $this->parseContent($item->children($namespaces['content'])->encoded)
@@ -94,6 +95,12 @@ class WpXmlParser
         if (empty(trim($content))) {
             return null;
         }
+
+        $images = $this->parseImages($content);
+
+        $updatedPaths = $this->downloadImages($images);
+
+        $content = str_replace(array_keys($updatedPaths), array_values($updatedPaths), $content);
 
         return new Post(
             $this->defaultUserId,
@@ -276,5 +283,52 @@ class WpXmlParser
         } catch (\Exception $e) {
             return Carbon::now()->format('Y-m-d H:i:s');
         }
+    }
+
+    /**
+     * Extracts image URLs from the content
+     *
+     * @param string $content
+     * @return array
+     */
+    private function parseImages(string $content): array
+    {
+        preg_match_all('/<img[^>]+src="([^"]+)"/', $content, $matches);
+        return $matches[1] ?? [];
+    }
+
+    /**
+     * Download images and update the content with the new image paths.
+     *
+     * @param array $images
+     * @return array
+     */
+    private function downloadImages(array $images): array
+    {
+        $storagePath = 'public/images/';
+        $webPath = '/storage/images/';
+        Storage::makeDirectory($storagePath);
+
+        $updatedPaths = [];
+        $counter = 1;
+
+        foreach ($images as $url) {
+            $extension = pathinfo(parse_url($url, PHP_URL_PATH), PATHINFO_EXTENSION) ?: 'jpg';
+            $newFileName = "{$counter}.{$extension}";
+            $newFilePath = "{$storagePath}{$newFileName}";
+
+            try {
+                $response = Http::get($url);
+                if ($response->successful()) {
+                    Storage::put($newFilePath, $response->body());
+                    $updatedPaths[$url] = "{$webPath}{$newFileName}";
+                    $counter++;
+                }
+            } catch (Exception $e) {
+                logger()->error("Erro ao baixar imagem: {$url} - " . $e->getMessage());
+            }
+        }
+
+        return $updatedPaths;
     }
 }
