@@ -7,6 +7,8 @@ use Carbon\Carbon;
 use Illuminate\Support\Str;
 use SimpleXMLElement;
 use Exception;
+use Illuminate\Support\Facades\Http;
+use Illuminate\Support\Facades\Storage;
 
 class WpXmlParser
 {
@@ -179,13 +181,58 @@ class WpXmlParser
 
         $content = (string) $content;
 
+        $content = $this->processWpContentWithImageConversion($content);
+
         $content = preg_replace([
             '/<!--(.*?)-->/',
             '/\s*class="wp-[^"]*"/',
             '/\s+/'
-        ], ['','', ' '], $content);
+        ], ['', '', ' '], $content);
 
-        return trim(preg_replace("/[\r\n]+/", "\n", $content));
+        $content = trim(preg_replace("/[\r\n]+/", "\n", $content));
+
+        return $content;
+    }
+
+    /**
+     * Process WordPress content and convert image blocks to Trix format
+     *
+     * @param string $html
+     * @return string
+     */
+    private function processWpContentWithImageConversion(string $html): string
+    {
+        $pattern = '/<!-- wp:image .*?-->\s*<figure[^>]*>.*?<img[^>]+src="([^"]+)"[^>]*>.*?<\/figure>\s*<!-- \/wp:image -->/s';
+
+        return preg_replace_callback($pattern, function ($match) {
+            $originalBlock = $match[0];
+            $originalSrc = $match[1];
+
+            try {
+                $response = Http::get($originalSrc);
+                if (!$response->successful()) {
+                    return $originalBlock; 
+                }
+
+                $extension = pathinfo($originalSrc, PATHINFO_EXTENSION) ?: 'png';
+                $filename = uniqid('img_') . '.' . $extension;
+                $storagePath = "images/{$filename}";
+                Storage::disk('public')->put($storagePath, $response->body());
+
+                $url = Storage::url($storagePath);
+                $fullUrl = asset($url);
+
+                return <<<HTML
+                <figure>
+                    <img src="{$fullUrl}" alt="Image">
+                </figure>
+                HTML;
+
+            } catch (\Throwable $e) {
+                return $originalBlock; 
+            }
+
+        }, $html);
     }
 
     /**
