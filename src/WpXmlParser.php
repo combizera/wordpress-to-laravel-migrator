@@ -4,11 +4,11 @@ namespace Combizera\WpMigration;
 
 use App\Models\Category;
 use Carbon\Carbon;
-use Illuminate\Support\Facades\Http;
-use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
 use SimpleXMLElement;
 use Exception;
+use Illuminate\Support\Facades\Http;
+use Illuminate\Support\Facades\Storage;
 
 class WpXmlParser
 {
@@ -87,6 +87,7 @@ class WpXmlParser
         }
 
         $wpData = $item->children($namespaces['wp']);
+
         $categories = $this->parseCategories($item);
         $content = isset($namespaces['content'])
             ? $this->parseContent($item->children($namespaces['content'])->encoded)
@@ -95,12 +96,6 @@ class WpXmlParser
         if (empty(trim($content))) {
             return null;
         }
-
-        $images = $this->parseImages($content);
-
-        $updatedPaths = $this->downloadImages($images);
-
-        $content = str_replace(array_keys($updatedPaths), array_values($updatedPaths), $content);
 
         return new Post(
             $this->defaultUserId,
@@ -186,13 +181,58 @@ class WpXmlParser
 
         $content = (string) $content;
 
+        $content = $this->processWpContentWithImageConversion($content);
+
         $content = preg_replace([
             '/<!--(.*?)-->/',
             '/\s*class="wp-[^"]*"/',
             '/\s+/'
-        ], ['','', ' '], $content);
+        ], ['', '', ' '], $content);
 
-        return trim(preg_replace("/[\r\n]+/", "\n", $content));
+        $content = trim(preg_replace("/[\r\n]+/", "\n", $content));
+
+        return $content;
+    }
+
+    /**
+     * Process WordPress content and convert image blocks to Trix format
+     *
+     * @param string $html
+     * @return string
+     */
+    private function processWpContentWithImageConversion(string $html): string
+    {
+        $pattern = '/<!-- wp:image .*?-->\s*<figure[^>]*>.*?<img[^>]+src="([^"]+)"[^>]*>.*?<\/figure>\s*<!-- \/wp:image -->/s';
+
+        return preg_replace_callback($pattern, function ($match) {
+            $originalBlock = $match[0];
+            $originalSrc = $match[1];
+
+            try {
+                $response = Http::get($originalSrc);
+                if (!$response->successful()) {
+                    return $originalBlock; 
+                }
+
+                $extension = pathinfo($originalSrc, PATHINFO_EXTENSION) ?: 'png';
+                $filename = uniqid('img_') . '.' . $extension;
+                $storagePath = "images/{$filename}";
+                Storage::disk('public')->put($storagePath, $response->body());
+
+                $url = Storage::url($storagePath);
+                $fullUrl = asset($url);
+
+                return <<<HTML
+                <figure>
+                    <img src="{$fullUrl}" alt="Image">
+                </figure>
+                HTML;
+
+            } catch (\Throwable $e) {
+                return $originalBlock; 
+            }
+
+        }, $html);
     }
 
     /**
@@ -283,52 +323,5 @@ class WpXmlParser
         } catch (\Exception $e) {
             return Carbon::now()->format('Y-m-d H:i:s');
         }
-    }
-
-    /**
-     * Extracts image URLs from the content
-     *
-     * @param string $content
-     * @return array
-     */
-    private function parseImages(string $content): array
-    {
-        preg_match_all('/<img[^>]+src="([^"]+)"/', $content, $matches);
-        return $matches[1] ?? [];
-    }
-
-    /**
-     * Download images and update the content with the new image paths.
-     *
-     * @param array $images
-     * @return array
-     */
-    private function downloadImages(array $images): array
-    {
-        $storagePath = 'public/images/';
-        $webPath = '/storage/images/';
-        Storage::makeDirectory($storagePath);
-
-        $updatedPaths = [];
-        $counter = 1;
-
-        foreach ($images as $url) {
-            $extension = pathinfo(parse_url($url, PHP_URL_PATH), PATHINFO_EXTENSION) ?: 'jpg';
-            $newFileName = "{$counter}.{$extension}";
-            $newFilePath = "{$storagePath}{$newFileName}";
-
-            try {
-                $response = Http::get($url);
-                if ($response->successful()) {
-                    Storage::put($newFilePath, $response->body());
-                    $updatedPaths[$url] = "{$webPath}{$newFileName}";
-                    $counter++;
-                }
-            } catch (Exception $e) {
-                logger()->error("Erro ao baixar imagem: {$url} - " . $e->getMessage());
-            }
-        }
-
-        return $updatedPaths;
     }
 }
