@@ -22,9 +22,15 @@
             "email": "ycombi349@gmail.com"
         }
     ],
+    "scripts": {
+        "format": "pint"
+    },
     "minimum-stability": "dev",
     "prefer-stable": true,
     "require": {
         "php": ">= 8.2"
+    },
+    "require-dev": {
+        "laravel/pint": "^1.22"
     }
 }

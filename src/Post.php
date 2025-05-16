@@ -4,8 +4,7 @@ namespace Combizera\WpMigration;
 
 class Post
 {
-    public function __construct
-    (
+    public function __construct(
         public int $userId,
         public array $categories,
         public string $title,
@@ -14,8 +13,7 @@ class Post
         public int $isPublished,
         public string $createdAt,
         public string $updatedAt
-    )
-    {
+    ) {
         //
     }
 }
