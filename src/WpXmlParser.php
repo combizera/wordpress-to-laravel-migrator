@@ -2,7 +2,6 @@
 
 namespace Combizera\WpMigration;
 
-use App\Models\Category;
 use Carbon\Carbon;
 use Exception;
 use Illuminate\Support\Facades\Http;
@@ -76,7 +75,7 @@ class WpXmlParser
     /**
      * Parses a single post item from the XML
      */
-    private function parsePost(SimpleXMLElement $item): ?Post
+    public function parsePost(SimpleXMLElement $item): ?Post
     {
         $namespaces = $item->getNamespaces(true);
 
@@ -94,6 +93,9 @@ class WpXmlParser
         if (empty(trim($content))) {
             return null;
         }
+
+        $postModel = app($this->postModel);
+        $columnNames = config('wp-migration.post_columns');
 
         return new Post(
             $this->defaultUserId,
@@ -183,22 +185,51 @@ class WpXmlParser
      */
     private function processWpContentWithImageConversion(string $html): string
     {
-        $pattern = '/<!-- wp:image .*?-->\s*<figure[^>]*>.*?<img[^>]+src="([^"]+)"[^>]*>.*?<\/figure>\s*<!-- \/wp:image -->/s';
+        $downloadImages = config('wp-migration.download_images', true);
+        $imageStorageDisk = config('wp-migration.image_storage_disk', 'public');
+        $imageStoragePath = config('wp-migration.image_storage_path', 'images');
+        $imageMaxSize = config('wp-migration.image_max_size', 5242880);
+        $allowedExtensions = config('wp-migration.image_allowed_extensions', ['jpg', 'jpeg', 'png', 'gif']);
 
-        return preg_replace_callback($pattern, function ($match) {
+        if (! $downloadImages) {
+            return $html;
+        }
+
+        $pattern = '/<!-- wp:image .*?-->/s';
+
+        return preg_replace_callback($pattern, function ($match) use ($imageStorageDisk, $imageStoragePath, $imageMaxSize, $allowedExtensions) {
             $originalBlock = $match[0];
-            $originalSrc = $match[1];
+            $originalSrc = '';
 
             try {
+                preg_match('/src="([^"]+)"/', $originalBlock, $srcMatch);
+                if (!isset($srcMatch[1])) {
+                    return $originalBlock;
+                }
+                $originalSrc = $srcMatch[1];
+
+                if (! filter_var($originalSrc, FILTER_VALIDATE_URL)) {
+                    return $originalBlock;
+                }
+
                 $response = Http::get($originalSrc);
                 if (! $response->successful()) {
                     return $originalBlock;
                 }
 
-                $extension = pathinfo($originalSrc, PATHINFO_EXTENSION) ?: 'png';
+                $fileSize = $response->header('content-length');
+                if ($fileSize > $imageMaxSize) {
+                    return $originalBlock;
+                }
+
+                $extension = pathinfo($originalSrc, PATHINFO_EXTENSION);
+                if (! in_array($extension, $allowedExtensions)) {
+                    return $originalBlock;
+                }
+
                 $filename = uniqid('img_').'.'.$extension;
-                $storagePath = "images/{$filename}";
-                Storage::disk('public')->put($storagePath, $response->body());
+                $storagePath = "{$imageStoragePath}/{$filename}";
+                Storage::disk($imageStorageDisk)->put($storagePath, $response->body());
 
                 $url = Storage::url($storagePath);
                 $fullUrl = asset($url);
@@ -207,7 +238,7 @@ class WpXmlParser
                 <figure>
                     <img src="{$fullUrl}" alt="Image">
                 </figure>
-                HTML;
+HTML;
 
             } catch (\Throwable $e) {
                 return $originalBlock;

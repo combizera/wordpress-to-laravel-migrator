@@ -43,4 +43,19 @@ return [
     |
     */
     'default_user_id' => 1,
+
+    /*
+    |--------------------------------------------------------------------------
+    | Image Download Configuration
+    |--------------------------------------------------------------------------
+    |
+    | Configure the image download behavior during migration.
+    | Set to false to skip image downloads and keep WordPress image URLs.
+    |
+    */
+    'download_images' => true,  
+    'image_storage_disk' => 'public',
+    'image_storage_path' => 'images',
+    'image_max_size' => 5242880,  
+    'image_allowed_extensions' => ['jpg', 'jpeg', 'png', 'gif'],  
 ];
