@@ -5,19 +5,19 @@
 ![License](https://img.shields.io/github/license/combizera/wordpress-to-laravel-migrator)
 ![PHP Version](https://img.shields.io/packagist/php-v/combizera/wordpress-to-laravel-migrator)
 
-O **WP Migrations** é um pacote para **migrar postagens do WordPress para Laravel** de maneira simples e eficiente.
+The **WP Migrations** is a Laravel package for migrating WordPress posts to Laravel in a simple and efficient way.
 
 ---
 
-## 🚀 Instalação
+## 🚀 Installation
 
-Para instalar via **Composer**, execute o seguinte comando:
+To install via **Composer**, run the following command:
 
 ```bash
 composer require combizera/wordpress-to-laravel-migrator
 ```
 
-Após a instalação, publique o arquivo de configuração para personalizar o comportamento do pacote:
+After installation, publish the configuration file to customize the package behavior:
 
 ```bash
 php artisan vendor:publish --tag=wp-migration-config
@@ -25,86 +25,112 @@ php artisan vendor:publish --tag=wp-migration-config
 
 ---
 
-## 📌 Informações Importantes
+## 📌 What is Migrated
 
-🔹 **O que é migrado?**
-- ✅ **Postagens do WordPress**
-- ❌ **Imagens** (por enquanto, não são migradas)
-- ❌ **Páginas do WordPress** (por enquanto, apenas posts são suportados)
+🔹 **What is migrated?**
+- ✅ **WordPress Posts**
+- ✅ **Images** (downloaded and converted to Trix format)
+- ❌ **WordPress Pages** (only posts are currently supported)
 
-🔹 **Requisitos obrigatórios:**
-- A **Model de postagens** deve se chamar **`Post`** (ou ser configurada no `wp-migration.php`).
-- A Model **deve conter os seguintes campos** no banco de dados:
+🔹 **Required Requirements:**
+- The **Post Model** must be named **`Post`** (or configured in `wp-migration.php`).
+- The Model **must contain the following fields** in the database:
     - `category_id` (integer)
     - `title` (string)
     - `slug` (string)
     - `content` (text)
+    - `is_published` (boolean)
     - `created_at` (timestamp)
     - `updated_at` (timestamp)
-- **Atributos fillable:** Certifique-se de que sua `Post` Model possui os campos acima em `$fillable`.
-- Ter um **arquivo `.xml`** exportado do WordPress com as postagens.
+- **Fillable Attributes:** Make sure your `Post` Model has the above fields in `$fillable`.
+- Have a **`.xml`** file exported from WordPress with the posts.
+
+🔹 **Image Configuration (Optional):**
+- **Image Download:** By default, the package will download images from WordPress and store them locally.
+- To disable image download, add `'download_images' => false` in the `wp-migration.php` file.
+- **Storage Configuration:**
+    - `image_storage_disk`: Storage disk (default: 'public')
+    - `image_storage_path`: Base path for images (default: 'images')
+    - `image_max_size`: Maximum image size in bytes (default: 5MB)
+    - `image_allowed_extensions`: Allowed extensions (default: ['jpg', 'jpeg', 'png', 'gif'])
+- **Image Validations:**
+    - Validates if the image URL is valid
+    - Validates if the image size exceeds the configured limit
+    - Validates if the image extension is allowed
+    - If any validation fails, keeps the original image URL
 
 ---
 
-## 📚 Como Usar
+## 📚 How to Use
 
-1️⃣ **Tenha o XML exportado do WordPress**  
-Para exportar suas postagens, vá até **Ferramentas > Exportar** no painel do WordPress e gere um arquivo `.xml`.
+1️⃣ **Export XML from WordPress**
+To export your posts, go to **Tools > Export** in the WordPress dashboard and generate an `.xml` file.
 
-2️⃣ **Execute a migração:**  
-Após instalar o pacote e configurar sua Model de `Post`, basta rodar o comando:
+2️⃣ **Run the migration:**
+After installing the package and configuring your `Post` Model, just run the command:
 
 ```bash
 php artisan wp:migrate database/migration.xml
 ```
 
-Isso irá processar o arquivo e criar os posts no seu banco de dados.
+This will process the file and create the posts in your database.
 
 ---
 
-## ⚙️ Configuração Opcional
+## ⚙️ Optional Configuration
 
-O pacote permite personalizar algumas configurações publicando o arquivo `wp-migration.php`:
+The package allows you to customize all available settings by publishing the `wp-migration.php` configuration file:
 
-```bash
-php artisan vendor:publish --tag=wp-migration-config
-```
-
-O arquivo de configuração (`config/wp-migration.php`) permite alterar:
 ```php
 return [
-    'post_model' => App\Models\Post::class,         // Model de postagens
-    'category_model' => App\Models\Category::class, // Model de categorias
-    'default_user_id' => 1,                         // Usuário padrão que receberá os posts
+    // Post Model Configuration
+    'post_model' => App\Models\Post::class,         // Post Model
+    'post_columns' => [
+        'title' => 'title',
+        'slug' => 'slug',
+        'content' => 'content',
+        'is_published' => 'is_published',
+    ],
+
+    // Category Model Configuration
+    'category_model' => App\Models\Category::class, // Category Model
+
+    // User Configuration
+    'default_user_id' => 1,                         // Default user ID for posts
+
+    // Image Configuration
+    'download_images' => true,                       // Enable/disable image download
+    'image_storage_disk' => 'public',                // Storage disk for images
+    'image_storage_path' => 'images',                // Base path for images
+    'image_max_size' => 5242880,                     // Maximum image size (5MB)
+    'image_allowed_extensions' => ['jpg', 'jpeg', 'png', 'gif'], // Allowed image extensions
 ];
 ```
 
 ---
 
-## 🤝 Contribuições
+## 🤝 Contributions
 
-Se quiser ajudar a **melhorar** este pacote:
+If you want to help **improve** this package:
 
-1. Faça um **fork** do repositório.
-2. Crie uma **branch** para sua feature:
+1. Fork the repository.
+2. Create a branch for your feature:
    ```bash
    git checkout -b feat/#issue-number-feature-name
-   # Exemplo: git checkout -b feat/#42-upgrade-config-file
+   # Example: git checkout -b feat/#42-upgrade-config-file
    ```
-3. Faça suas alterações e **commite**:
+3. Make your changes and commit:
    ```bash
    git commit -m "feat(File): Add new feature"
    ```
-4. Envie um **pull request** e aguarde!
+4. Submit a **pull request** and wait!
 
-Sinta-se à vontade para **abrir issues** caso tenha dúvidas ou sugestões! 🚀
-
----
-
-## 📝 Licença
-
-Este projeto é licenciado sob a **MIT License**. Sinta-se livre para usá-lo e modificá-lo conforme necessário. 
-
-Viva o **Open Source**! 🎉
+Feel free to **open issues** if you have any questions or suggestions! 🚀
 
 ---
+
+## 📝 License
+
+This project is licensed under the **MIT License**. Feel free to use and modify it as needed.
+
+Live **Open Source**! 🎉
