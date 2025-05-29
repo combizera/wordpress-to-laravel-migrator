@@ -118,7 +118,7 @@ class WpXmlParser
 
         $wpData = $item->children($namespaces['wp']);
 
-        return isset($wpData->post_type) && (string) $wpData->post_type === 'post';
+        return isset($wpData->post_type) && (string) $wpData->post_type === config('wp-migration.post_type', 'post');
     }
 
     /**

@@ -24,6 +24,17 @@ return [
 
     /*
     |--------------------------------------------------------------------------
+    | Post Type Configuration
+    |--------------------------------------------------------------------------
+    |
+    | Defines the default post type to be imported from WordPress.
+    | The default is 'post', but it can be changed if necessary.
+    |
+    */
+    'post_type' => 'post',
+
+    /*
+    |--------------------------------------------------------------------------
     | Category Model Configuration
     |--------------------------------------------------------------------------
     |
