@@ -1,7 +1,7 @@
 <?php
 
-use App\Models\Category;
 use App\Models\Post;
+use App\Models\Category;
 
 return [
 
@@ -43,4 +43,15 @@ return [
     |
     */
     'default_user_id' => 1,
+
+    /*
+    |--------------------------------------------------------------------------
+    | Import Images Configuration
+    |--------------------------------------------------------------------------
+    |
+    | Controls whether images from WordPress posts should be imported and converted.
+    | If set to false, images will be kept in their original format.
+    |
+    */
+    'import_images' => true,
 ];
