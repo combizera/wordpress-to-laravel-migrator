@@ -3,18 +3,17 @@
 namespace Combizera\WpMigration\Console;
 
 use App\Models\Category;
-use Illuminate\Console\Command;
 use Combizera\WpMigration\WpXmlParser;
+use Illuminate\Console\Command;
 
 class MigrateWpXmlCommand extends Command
 {
     protected $signature = 'wp:migrate {file}';
+
     protected $description = 'Migrate posts from a WordPress XML to the database.';
 
     /**
      * Execute the console command.
-     *
-     * @return void
      */
     public function handle(): void
     {
@@ -26,14 +25,14 @@ class MigrateWpXmlCommand extends Command
 
             $totalItems = count($parser->xml->channel->item ?? []);
             $totalPosts = count($posts);
-            $totalPublished = count(array_filter($posts, fn($post) => $post->isPublished === 1));
+            $totalPublished = count(array_filter($posts, fn ($post) => $post->isPublished === 1));
             $totalUnpublished = $totalPosts - $totalPublished;
 
             $this->info("📄 XML file: {$file}");
             $this->info("🔍 Total items: {$totalItems}");
             $this->info("📝 Total posts: {$totalPosts}");
             $this->info("📢 Published: {$totalPublished} | ⏳ Draft: {$totalUnpublished}");
-            $this->info("📂 Loading categories...");
+            $this->info('📂 Loading categories...');
 
             $postModel = app(config('wp-migration.post_model'));
 
@@ -41,7 +40,7 @@ class MigrateWpXmlCommand extends Command
             $bar->start();
 
             foreach ($posts as $post) {
-                $categoryId = !empty($post->categories) ? $post->categories[0] : $this->getDefaultCategoryId();
+                $categoryId = ! empty($post->categories) ? $post->categories[0] : $this->getDefaultCategoryId();
                 $slug = $parser->parseSlug($post->title, $categoryId);
 
                 $postModel::query()->create([
@@ -62,14 +61,12 @@ class MigrateWpXmlCommand extends Command
             $this->newLine();
             $this->info("🎉 {$totalPosts} posts successfully migrated!");
         } catch (\Exception $e) {
-            $this->error('❌ Error: ' . $e->getMessage());
+            $this->error('❌ Error: '.$e->getMessage());
         }
     }
 
     /**
      * Get the default category ID
-     *
-     * @return int
      */
     private function getDefaultCategoryId(): int
     {

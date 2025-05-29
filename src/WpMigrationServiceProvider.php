@@ -14,14 +14,14 @@ class WpMigrationServiceProvider extends ServiceProvider
         ]);
 
         $this->publishes([
-            __DIR__ . '/../config/wp-migration.php' => config_path('wp-migration.php'),
+            __DIR__.'/../config/wp-migration.php' => config_path('wp-migration.php'),
         ], 'wp-migration-config');
     }
 
     public function boot(): void
     {
         $this->mergeConfigFrom(
-            __DIR__ . '/../config/wp-migration.php',
+            __DIR__.'/../config/wp-migration.php',
             'wp-migration'
         );
 
