@@ -181,7 +181,9 @@ class WpXmlParser
 
         $content = (string) $content;
 
-        $content = $this->processWpContentWithImageConversion($content);
+        if (config('wp-migration.import_images', true)) {
+            $content = $this->processWpContentWithImageConversion($content);
+        }
 
         $content = preg_replace([
             '/<!--(.*?)-->/',
