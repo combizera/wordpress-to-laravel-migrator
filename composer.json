@@ -3,18 +3,16 @@
     "description": "Package for migrating WordPress posts to laravel",
     "type": "library",
     "license": "MIT",
-    "version": "1.1.1",
     "autoload": {
         "psr-4": {
             "Combizera\\WpMigration\\": "src/"
         }
     },
-    "extra": {
-        "laravel": {
-            "providers": [
-                "Combizera\\WpMigration\\WpMigrationServiceProvider"
-            ]
-        }
+    "require": {
+        "php": ">= 8.2"
+    },
+    "require-dev": {
+        "laravel/pint": "^1.22"
     },
     "authors": [
         {
@@ -27,10 +25,11 @@
     },
     "minimum-stability": "dev",
     "prefer-stable": true,
-    "require": {
-        "php": ">= 8.2"
-    },
-    "require-dev": {
-        "laravel/pint": "^1.22"
+    "extra": {
+        "laravel": {
+            "providers": [
+                "Combizera\\WpMigration\\WpMigrationServiceProvider"
+            ]
+        }
     }
 }
