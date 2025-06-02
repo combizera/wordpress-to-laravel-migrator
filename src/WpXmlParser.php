@@ -4,30 +4,33 @@ namespace Combizera\WpMigration;
 
 use App\Models\Category;
 use Carbon\Carbon;
-use Illuminate\Support\Str;
-use SimpleXMLElement;
 use Exception;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Storage;
+use Illuminate\Support\Str;
+use SimpleXMLElement;
 
 class WpXmlParser
 {
     public SimpleXMLElement $xml;
+
     public string $postModel;
+
     public string $categoryModel;
+
     public int $defaultUserId;
+
     public array $postColumns;
 
     /**
      * Load the XML file and initialize the parser
      *
      * @throws Exception
-     * @param string $filePath
      */
     public function __construct(string $filePath)
     {
-        if (!file_exists($filePath)) {
-            throw new Exception("XML File not found.");
+        if (! file_exists($filePath)) {
+            throw new Exception('XML File not found.');
         }
 
         $this->postModel = config('wp-migration.post_model', 'App\\Models\\Post');
@@ -40,24 +43,22 @@ class WpXmlParser
             'is_published' => 'is_published',
         ]);
 
-        $this->xml = simplexml_load_file($filePath, "SimpleXMLElement", LIBXML_NOCDATA);
+        $this->xml = simplexml_load_file($filePath, 'SimpleXMLElement', LIBXML_NOCDATA);
 
         if ($this->xml === false) {
-            throw new Exception("Error loading XML file.");
+            throw new Exception('Error loading XML file.');
         }
     }
-
 
     /**
      * Extracts and returns an array of posts from the XML file
      *
      * @throws Exception
-     * @return array
      */
     public function getPosts(): array
     {
-        if (!isset($this->xml->channel) || !isset($this->xml->channel->item)) {
-            throw new Exception("Invalid XML structure. Channel or items not found.");
+        if (! isset($this->xml->channel) || ! isset($this->xml->channel->item)) {
+            throw new Exception('Invalid XML structure. Channel or items not found.');
         }
 
         $posts = [];
@@ -74,15 +75,12 @@ class WpXmlParser
 
     /**
      * Parses a single post item from the XML
-     *
-     * @param SimpleXMLElement $item
-     * @return Post|null
      */
     private function parsePost(SimpleXMLElement $item): ?Post
     {
         $namespaces = $item->getNamespaces(true);
 
-        if (!$this->isValidPost($item, $namespaces)) {
+        if (! $this->isValidPost($item, $namespaces)) {
             return null;
         }
 
@@ -111,27 +109,20 @@ class WpXmlParser
 
     /**
      * Validates if an XML item is a valid WordPress post
-     *
-     * @param SimpleXMLElement $item
-     * @param array $namespaces
-     * @return bool
      */
     private function isValidPost(SimpleXMLElement $item, array $namespaces): bool
     {
-        if (!isset($namespaces['wp'])) {
+        if (! isset($namespaces['wp'])) {
             return false;
         }
 
         $wpData = $item->children($namespaces['wp']);
 
-        return isset($wpData->post_type) && (string) $wpData->post_type === 'post';
+        return isset($wpData->post_type) && (string) $wpData->post_type === config('wp-migration.post_type', 'post');
     }
 
     /**
      * Parses the post title safely
-     *
-     * @param SimpleXMLElement $item
-     * @return string
      */
     private function parseTitle(SimpleXMLElement $item): string
     {
@@ -141,10 +132,6 @@ class WpXmlParser
     /**
      * Generate a unique slug for the post.
      * If the slug already exists in the same category, append a number (ex: slug-1, slug-2).
-     *
-     * @param string $title
-     * @param int $categoryId
-     * @return string
      */
     public function parseSlug(string $title, int $categoryId): string
     {
@@ -152,7 +139,7 @@ class WpXmlParser
 
         $postModel = app($this->postModel);
 
-        if (!$postModel::query()->where($this->postColumns['slug'], $baseSlug)->exists()) {
+        if (! $postModel::query()->where($this->postColumns['slug'], $baseSlug)->exists()) {
             return $baseSlug;
         }
 
@@ -169,26 +156,21 @@ class WpXmlParser
 
     /**
      * Cleans and format the XML content.
-     *
-     * @param SimpleXMLElement|null $content
-     * @return string
      */
     private function parseContent(?SimpleXMLElement $content): string
     {
-        if (!$content) {
+        if (! $content) {
             return '';
         }
 
         $content = (string) $content;
 
-        if (config('wp-migration.import_images', true)) {
-            $content = $this->processWpContentWithImageConversion($content);
-        }
+        $content = $this->processWpContentWithImageConversion($content);
 
         $content = preg_replace([
             '/<!--(.*?)-->/',
             '/\s*class="wp-[^"]*"/',
-            '/\s+/'
+            '/\s+/',
         ], ['', '', ' '], $content);
 
         $content = trim(preg_replace("/[\r\n]+/", "\n", $content));
@@ -198,9 +180,6 @@ class WpXmlParser
 
     /**
      * Process WordPress content and convert image blocks to Trix format
-     *
-     * @param string $html
-     * @return string
      */
     private function processWpContentWithImageConversion(string $html): string
     {
@@ -212,12 +191,12 @@ class WpXmlParser
 
             try {
                 $response = Http::get($originalSrc);
-                if (!$response->successful()) {
-                    return $originalBlock; 
+                if (! $response->successful()) {
+                    return $originalBlock;
                 }
 
                 $extension = pathinfo($originalSrc, PATHINFO_EXTENSION) ?: 'png';
-                $filename = uniqid('img_') . '.' . $extension;
+                $filename = uniqid('img_').'.'.$extension;
                 $storagePath = "images/{$filename}";
                 Storage::disk('public')->put($storagePath, $response->body());
 
@@ -231,7 +210,7 @@ class WpXmlParser
                 HTML;
 
             } catch (\Throwable $e) {
-                return $originalBlock; 
+                return $originalBlock;
             }
 
         }, $html);
@@ -240,7 +219,6 @@ class WpXmlParser
     /**
      * Parse categories from the XML file
      *
-     * @param SimpleXMLElement $item
      * @return array<int> List of category IDs
      */
     private function parseCategories(SimpleXMLElement $item): array
@@ -248,12 +226,12 @@ class WpXmlParser
         $categories = [];
 
         $namespaces = $item->getNamespaces(true);
-        if (!isset($namespaces['wp'])) {
+        if (! isset($namespaces['wp'])) {
             return [];
         }
 
         $wpData = $item->children($namespaces['wp']);
-        if (!isset($wpData->post_type) || (string) $wpData->post_type !== 'post') {
+        if (! isset($wpData->post_type) || (string) $wpData->post_type !== 'post') {
             return [];
         }
 
@@ -265,7 +243,7 @@ class WpXmlParser
                 continue;
             }
 
-            if (!preg_match('/^[\p{L}0-9\s\-]+$/u', $categoryName)) {
+            if (! preg_match('/^[\p{L}0-9\s\-]+$/u', $categoryName)) {
                 continue;
             }
 
@@ -287,15 +265,12 @@ class WpXmlParser
     /**
      * Determine if the post should be published.
      * Returns 1 if the status is "publish", otherwise 0.
-     *
-     * @param SimpleXMLElement $item
-     * @return int
      */
     private function parsePublish(SimpleXMLElement $item): int
     {
         $namespaces = $item->getNamespaces(true);
 
-        if (!isset($namespaces['wp'])) {
+        if (! isset($namespaces['wp'])) {
             return 0;
         }
 
@@ -306,9 +281,6 @@ class WpXmlParser
 
     /**
      * Convert date format to Laravel `created_at` format
-     *
-     * @param string $date
-     * @return string
      */
     private function parseDate(string $date): string
     {
