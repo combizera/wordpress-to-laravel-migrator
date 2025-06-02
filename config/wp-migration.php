@@ -1,7 +1,7 @@
 <?php
 
-use App\Models\Post;
 use App\Models\Category;
+use App\Models\Post;
 
 return [
 
@@ -24,6 +24,17 @@ return [
 
     /*
     |--------------------------------------------------------------------------
+    | Post Type Configuration
+    |--------------------------------------------------------------------------
+    |
+    | Defines the default post type to be imported from WordPress.
+    | The default is 'post', but it can be changed if necessary.
+    |
+    */
+    'post_type' => 'post',
+
+    /*
+    |--------------------------------------------------------------------------
     | Category Model Configuration
     |--------------------------------------------------------------------------
     |
@@ -43,15 +54,4 @@ return [
     |
     */
     'default_user_id' => 1,
-
-    /*
-    |--------------------------------------------------------------------------
-    | Import Images Configuration
-    |--------------------------------------------------------------------------
-    |
-    | Controls whether images from WordPress posts should be imported and converted.
-    | If set to false, images will be kept in their original format.
-    |
-    */
-    'import_images' => true,
 ];
