@@ -1,9 +1,17 @@
-# 📝 WP Migrations
+<div align="center">
+  <a href="https://github.com/combizera/wordpress-to-laravel-migrator">
+    <img src="./docs/banner.webp" alt="Banner do pacote wordpress-to-laravel-migrator" style="max-width: 100%; height: auto;" />
+  </a>
+
+  <h1>📝 Ferramenta de migração de posts do WordPress para Laravel</h1>
+</div>
+
 
 ![Packagist Version](https://img.shields.io/packagist/v/combizera/wordpress-to-laravel-migrator)
 ![Downloads](https://img.shields.io/packagist/dt/combizera/wordpress-to-laravel-migrator)
 ![License](https://img.shields.io/github/license/combizera/wordpress-to-laravel-migrator)
 ![PHP Version](https://img.shields.io/packagist/php-v/combizera/wordpress-to-laravel-migrator)
+![PHPStan Level](https://img.shields.io/badge/PHPStan-level%205-brightgreen?logo=php)
 
 O **WP Migrations** é um pacote para **migrar postagens do WordPress para Laravel** de maneira simples e eficiente.
 
@@ -29,7 +37,7 @@ php artisan vendor:publish --tag=wp-migration-config
 
 🔹 **O que é migrado?**
 - ✅ **Postagens do WordPress**
-- ❌ **Imagens** (por enquanto, não são migradas)
+- ✅ **Imagens e PDF's**
 - ❌ **Páginas do WordPress** (por enquanto, apenas posts são suportados)
 
 🔹 **Requisitos obrigatórios:**
@@ -58,7 +66,9 @@ Após instalar o pacote e configurar sua Model de `Post`, basta rodar o comando:
 php artisan wp:migrate database/migration.xml
 ```
 
-Isso irá processar o arquivo e criar os posts no seu banco de dados.
+Considerações Importantes:
+- Se o arquivo de configuração não tiver sido publicado, você será perguntado se deseja importar as imagens.
+- O comando processa o XML, cria os posts no banco e salva as mídias localmente (se ativado).
 
 ---
 
@@ -71,11 +81,23 @@ php artisan vendor:publish --tag=wp-migration-config
 ```
 
 O arquivo de configuração (`config/wp-migration.php`) permite alterar:
+[//]: # (<aqui precisa alterar para as novas configs>)
 ```php
 return [
-    'post_model' => App\Models\Post::class,         // Model de postagens
-    'category_model' => App\Models\Category::class, // Model de categorias
-    'default_user_id' => 1,                         // Usuário padrão que receberá os posts
+    'post_model' => App\Models\Post::class,
+    
+    'post_columns' => [
+        'title' => 'title',
+        'slug' => 'slug',
+        'content' => 'content',
+        'is_published' => 'is_published',
+    ],
+    
+    'category_model' => App\Models\Category::class,
+
+    'default_user_id' => 1,
+
+    'import_images' => true,
 ];
 ```
 
