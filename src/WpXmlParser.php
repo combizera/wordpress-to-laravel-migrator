@@ -22,12 +22,18 @@ class WpXmlParser
 
     public array $postColumns;
 
+    public bool $importImages;
+
+    public int $processedImages = 0;
+
+    public int $processedPdfs = 0;
+
     /**
      * Load the XML file and initialize the parser
      *
      * @throws Exception
      */
-    public function __construct(string $filePath)
+    public function __construct(string $filePath, ?bool $importImages = null)
     {
         if (! file_exists($filePath)) {
             throw new Exception('XML File not found.');
@@ -42,6 +48,8 @@ class WpXmlParser
             'content' => 'content',
             'is_published' => 'is_published',
         ]);
+
+        $this->importImages = $importImages !== null ? $importImages : config('wp-migration.import_images', true);
 
         $this->xml = simplexml_load_file($filePath, 'SimpleXMLElement', LIBXML_NOCDATA);
 
@@ -165,7 +173,9 @@ class WpXmlParser
 
         $content = (string) $content;
 
-        $content = $this->processWpContentWithImageConversion($content);
+        if ($this->importImages) {
+            $content = $this->processWpContentWithImageConversion($content);
+        }
 
         $content = preg_replace([
             '/<!--(.*?)-->/',
@@ -183,9 +193,11 @@ class WpXmlParser
      */
     private function processWpContentWithImageConversion(string $html): string
     {
-        $pattern = '/<!-- wp:image .*?-->\s*<figure[^>]*>.*?<img[^>]+src="([^"]+)"[^>]*>.*?<\/figure>\s*<!-- \/wp:image -->/s';
+        $imagePattern = '/<!-- wp:image .*?-->\s*<figure[^>]*>.*?<img[^>]+src="([^"]+)"[^>]*>.*?<\/figure>\s*<!-- \/wp:image -->/s';
 
-        return preg_replace_callback($pattern, function ($match) {
+        $filePattern = '/<a[^>]+href="([^"]+\.(?:pdf|doc|docx|xls|xlsx|ppt|pptx))"[^>]*>.*?<\/a>/i';
+
+        $html = preg_replace_callback($imagePattern, function ($match) {
             $originalBlock = $match[0];
             $originalSrc = $match[1];
 
@@ -203,17 +215,52 @@ class WpXmlParser
                 $url = Storage::url($storagePath);
                 $fullUrl = asset($url);
 
+                $this->processedImages++;
+
                 return <<<HTML
-                <figure>
-                    <img src="{$fullUrl}" alt="Image">
-                </figure>
-                HTML;
+            <figure>
+                <img src="{$fullUrl}" alt="Image">
+            </figure>
+            HTML;
 
             } catch (\Throwable $e) {
                 return $originalBlock;
             }
 
         }, $html);
+
+        $html = preg_replace_callback($filePattern, function ($match) {
+            $originalLink = $match[0];
+            $originalSrc = $match[1];
+
+            try {
+                $response = Http::get($originalSrc);
+                if (! $response->successful()) {
+                    return $originalLink;
+                }
+
+                $extension = pathinfo($originalSrc, PATHINFO_EXTENSION);
+                $filename = uniqid('file_').'.'.$extension;
+                $storagePath = "files/{$filename}";
+                Storage::disk('public')->put($storagePath, $response->body());
+
+                $url = Storage::url($storagePath);
+                $fullUrl = asset($url);
+
+                if (strtolower($extension) === 'pdf') {
+                    $this->processedPdfs++;
+                }
+
+                // Manter o texto original do link, apenas mudando a URL
+                return preg_replace('/href="[^"]*"/', 'href="'.$fullUrl.'"', $originalLink);
+
+            } catch (\Throwable $e) {
+                return $originalLink;
+            }
+
+        }, $html);
+
+        return $html;
     }
 
     /**
@@ -297,5 +344,21 @@ class WpXmlParser
         } catch (\Exception $e) {
             return Carbon::now()->format('Y-m-d H:i:s');
         }
+    }
+
+    /**
+     * Get the count of processed images
+     */
+    public function getProcessedImagesCount(): int
+    {
+        return $this->processedImages;
+    }
+
+    /**
+     * Get the count of processed PDFs
+     */
+    public function getProcessedPdfsCount(): int
+    {
+        return $this->processedPdfs;
     }
 }
