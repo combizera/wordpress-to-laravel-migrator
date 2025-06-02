@@ -1,6 +1,6 @@
-<div align="left">
+<div align="center">
   <a href="https://github.com/combizera/wordpress-to-laravel-migrator">
-    <img src="./docs/banner.webp" alt="Banner do pacote wordpress-to-laravel-migrator" height="190">
+    <img src="./docs/banner.webp" alt="Banner do pacote wordpress-to-laravel-migrator" style="max-width: 100%; height: auto;" />
   </a>
 
   <h1>📝 Ferramenta de migração de posts do WordPress para Laravel</h1>
