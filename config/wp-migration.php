@@ -65,5 +65,16 @@ return [
     |
     */
     'import_images' => true,
+
+    /*
+    |--------------------------------------------------------------------------
+    | Category Domain Configuration
+    |--------------------------------------------------------------------------
+    |
+    | Defines the default category domain to be imported from WordPress.
+    | The default is 'category', but it can be changed if necessary.
+    |
+    */
+    'category_domain' => 'category',
   
 ];

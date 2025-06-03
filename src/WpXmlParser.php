@@ -294,7 +294,7 @@ class WpXmlParser
                 continue;
             }
 
-            if ($categoryDomain !== 'category') {
+            if ($categoryDomain !== config('wp-migration.category_domain', 'category')) {
                 continue;
             }
 
